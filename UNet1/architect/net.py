@@ -77,6 +77,7 @@ class UNet(nn.Module):
         self.u4 = UpSample(128)
         self.c9 = Conv_Block(128, 64)
         self.out=nn.Conv2d(64,1,3,1,1)
+        # self.out = nn.Conv2d(64, 1, 1, 1, 0)
         self.Th = nn.Sigmoid()
         # self.Th = nn.Softmax()   多分类问题中
 
