@@ -10,11 +10,11 @@ from torchvision.utils import save_image
 '''
     初始参数配置
 '''
-weight_path = 'UNet1/params/unet.pth'
+weight_path = '/Users/muyichun/PycharmProjects/new_unet/UNet1/params/unet.pth'
 img_name = 'exp_128'
 label_name = 'label_128'
 data_path = r'/Users/muyichun/Desktop/Demo/MCF_speckle_digits/'
-save_path = 'UNet1/train_image'
+save_path = '/Users/muyichun/PycharmProjects/new_unet/UNet1/train_image'
 epochs = 20
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
