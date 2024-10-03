@@ -2,6 +2,7 @@ import os
 
 import tqdm
 from torch import optim
+from torch.optim.lr_scheduler import StepLR
 from torch.utils.data import DataLoader
 
 from UNet3.architect.net import UNet
@@ -23,7 +24,6 @@ save_path = r'/Users/muyichun/PycharmProjects/new_unet/UNet3/train_image/'
 batch_size = 1
 epochs = 200
 
-
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 '''
@@ -40,10 +40,12 @@ if __name__ == '__main__':
         print('### not successful load weight')
 
     opt = optim.Adam(net.parameters(), lr=1e-4)
+    scheduler = torch.optim.lr_scheduler.ExponentialLR(opt, gamma=0.9)
     loss_fun = nn.BCELoss()
 
     best_score = 999
     for epoch in range(epochs):
+        print('Current learning rate is: ', opt.param_groups[0]['lr'])
         # 训练
         net.train()
         for i, (image, label) in enumerate(tqdm.tqdm(train_data_loader)):
@@ -53,7 +55,6 @@ if __name__ == '__main__':
             opt.zero_grad()
             train_loss.backward()
             opt.step()
-
             if i % 5 == 0:
                 print(f'{epoch+1}-{i}-train_loss===>>{train_loss.item()}')
             img = torch.stack([image[0], label[0], out_image[0]], dim=0)
@@ -68,10 +69,12 @@ if __name__ == '__main__':
                 loss = loss_fun(out_image, label)
                 total_loss += loss.item()
             average_loss = total_loss / len(valid_data_loader)
-
             print(f"Epoch {epoch + 1}/{epochs}, Validation Loss: {average_loss:.4f}")
 
         # 保存性能最好的模型
         if best_score > average_loss:
             best_score = average_loss
             torch.save(net.state_dict(), weight_path + str(round(best_score,4)) + weight_name)
+
+        # 调整损失函数
+        scheduler.step()
