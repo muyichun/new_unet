@@ -12,7 +12,7 @@ from torchvision.utils import save_image
 '''
     初始参数配置
 '''
-weight_name = "0.133.pth"
+weight_name = "0.133722.pth"
 weight_path = r'/Users/muyichun/PycharmProjects/new_unet/UNet3/'
 pth_path = r'/Users/muyichun/PycharmProjects/new_unet/UNet3/pth/'
 train_img = 'exp_128'
@@ -77,6 +77,6 @@ if __name__ == '__main__':
             best_score = average_loss
             torch.save(net.state_dict(), weight_path + str(best_score) + ".pth")
         # 每轮训练完毕，保持当前批次模型
-        torch.save(net.state_dict(), pth_path + str(average_loss) + "_" + str(opt.param_groups[0]['lr']) + ".pth")
+        torch.save(net.state_dict(), pth_path + str(epoch) + "_" + str(average_loss) + "_" + str(opt.param_groups[0]['lr']) + ".pth")
         # 调整损失函数
         scheduler.step()
