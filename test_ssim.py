@@ -10,6 +10,7 @@ imgsPath1 = '/Users/muyichun/Desktop/3_210/fz_testLabel'
 imgsPath2 = '/Users/muyichun/Desktop/3_210/my_test_predict'
 imgs_dir = os.listdir(imgsPath1)
 max = 0
+mean = 0
 x = list(range(20701, 20797))
 # x = list(range(29301, 29379))
 y = []
@@ -17,11 +18,13 @@ for i in x:
     image1 = keep_image_size_open(imgsPath1 + '/' + str(i) + ".png")
     image2 = keep_image_size_open(imgsPath2 + '/' + str(i) + ".png")
     ssim_score = ssim(np.array(image1), np.array(image2))
+    mean += ssim_score
     if ssim_score > max:
         max = ssim_score
     print(f"The SSIM score is {ssim_score}", " xxx ", i)
     y.append(ssim_score)
 print(f"The max SSIM score is {max}")
+print(f"The mean SSIM score is {mean/len(x)}")
 
 # 绘制散点图
 plt.scatter(x, y)

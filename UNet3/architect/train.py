@@ -12,8 +12,9 @@ from torchvision.utils import save_image
 '''
     初始参数配置
 '''
-weight_name = "unet.pth"
+weight_name = "0.133.pth"
 weight_path = r'/Users/muyichun/PycharmProjects/new_unet/UNet3/'
+pth_path = r'/Users/muyichun/PycharmProjects/new_unet/UNet3/pth/'
 train_img = 'exp_128'
 train_label = 'label_128'
 valid_img = 'exp_valid_128'
@@ -40,7 +41,8 @@ if __name__ == '__main__':
 
     opt = optim.Adam(net.parameters(), lr=1e-4)
     scheduler = torch.optim.lr_scheduler.ExponentialLR(opt, gamma=0.9)
-    loss_fun = nn.BCELoss()
+    # loss_fun = nn.BCELoss()
+    loss_fun = nn.L1Loss()
 
     best_score = 999
     for epoch in range(epochs):
@@ -67,13 +69,14 @@ if __name__ == '__main__':
                 out_image = net(image)
                 loss = loss_fun(out_image, label)
                 total_loss += loss.item()
-            average_loss = round(total_loss / len(valid_data_loader), 4)
+            average_loss = round(total_loss / len(valid_data_loader), 6)
             print(f"Epoch {epoch + 1}/{epochs}, Validation Loss: {average_loss}")
 
         # 保存性能最好的模型
         if best_score > average_loss:
             best_score = average_loss
-            torch.save(net.state_dict(), weight_path + str(best_score) + weight_name)
-
+            torch.save(net.state_dict(), weight_path + str(best_score) + ".pth")
+        # 每轮训练完毕，保持当前批次模型
+        torch.save(net.state_dict(), pth_path + str(average_loss) + "_" + str(opt.param_groups[0]['lr']) + ".pth")
         # 调整损失函数
         scheduler.step()

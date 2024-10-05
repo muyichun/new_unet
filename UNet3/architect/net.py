@@ -1,127 +1,121 @@
 import torch
-from torch import nn
-from torch.nn import functional as F
-import torch
 import torch.nn as nn
+
+# Define the network architecture
 class UNet(nn.Module):
-    def __init__(self, in_channels=1, out_channels=1, filter_num=128, filter_size=3):
+    def __init__(self, filter_size=3, filter_num=128):
         super(UNet, self).__init__()
 
+        # Encoder Stage 2
+        self.encoder_stage_2_conv1 = nn.Conv2d(in_channels=1, out_channels=filter_num*2, kernel_size=filter_size, padding='same')
+        self.encoder_stage_2_relu1 = nn.ReLU()
+        self.encoder_stage_2_conv2 = nn.Conv2d(in_channels=filter_num*2, out_channels=filter_num*2, kernel_size=filter_size, padding='same')
+        self.encoder_stage_2_relu2 = nn.ReLU()
+        self.encoder_stage_2_maxpool = nn.MaxPool2d(kernel_size=2, stride=2)
 
-        # 下采样：1
-        self.conv1_1 = nn.Conv2d(in_channels, filter_num, kernel_size=filter_size, padding='same')
-        self.conv1_2 = nn.Conv2d(filter_num, filter_num, kernel_size=filter_size, padding='same')
-        self.encoder_stage_1 = nn.Sequential(
-            self.conv1_1,
-            nn.ReLU(),
-            self.conv1_2,
-            nn.ReLU()
-        )
+        # Encoder Stage 3
+        self.encoder_stage_3_conv1 = nn.Conv2d(in_channels=filter_num*2, out_channels=filter_num*4, kernel_size=filter_size, padding='same')
+        self.encoder_stage_3_relu1 = nn.ReLU()
+        self.encoder_stage_3_conv2 = nn.Conv2d(in_channels=filter_num*4, out_channels=filter_num*4, kernel_size=filter_size, padding='same')
+        self.encoder_stage_3_relu2 = nn.ReLU()
+        self.encoder_stage_3_maxpool = nn.MaxPool2d(kernel_size=2, stride=2)
 
-        # 下采样：2
-        self.conv1_3 = nn.Conv2d(filter_num, filter_num * 2, kernel_size=filter_size, padding='same')
-        self.conv1_4 = nn.Conv2d(filter_num * 2, filter_num * 2, kernel_size=filter_size, padding='same')
-        self.encoder_stage_2 = nn.Sequential(
-            nn.MaxPool2d(kernel_size=2, stride=2),
-            self.conv1_3,
-            nn.ReLU(),
-            self.conv1_4,
-            nn.ReLU()
-        )
+        # Encoder Stage 4
+        self.encoder_stage_4_conv1 = nn.Conv2d(in_channels=filter_num*4, out_channels=filter_num*8, kernel_size=filter_size, padding='same')
+        self.encoder_stage_4_relu1 = nn.ReLU()
+        self.encoder_stage_4_conv2 = nn.Conv2d(in_channels=filter_num*8, out_channels=filter_num*8, kernel_size=filter_size, padding='same')
+        self.encoder_stage_4_relu2 = nn.ReLU()
+        self.encoder_stage_4_maxpool = nn.MaxPool2d(kernel_size=2, stride=2)
 
-        # 下采样：3
-        self.conv1_5 = nn.Conv2d(filter_num * 2, filter_num * 4, kernel_size=filter_size, padding='same')
-        self.conv1_6 = nn.Conv2d(filter_num * 4, filter_num * 4, kernel_size=filter_size, padding='same')
-        self.encoder_stage_3 = nn.Sequential(
-            nn.MaxPool2d(kernel_size=2, stride=2),
-            self.conv1_5,
-            nn.ReLU(),
-            self.conv1_6,
-            nn.ReLU()
-        )
+        # Bridge
+        self.bridge_conv1 = nn.Conv2d(in_channels=filter_num*8, out_channels=filter_num*16, kernel_size=filter_size, padding='same')
+        self.bridge_relu1 = nn.ReLU()
+        self.bridge_conv2 = nn.Conv2d(in_channels=filter_num*16, out_channels=filter_num*16, kernel_size=filter_size, padding='same')
+        self.bridge_relu2 = nn.ReLU()
+        self.bridge_upconv = nn.ConvTranspose2d(in_channels=filter_num*16, out_channels=filter_num*8, kernel_size=2, stride=2)
+        self.bridge_uprelu = nn.ReLU()
 
-        # 底部层
-        self.conv1_7 = nn.Conv2d(filter_num * 4, filter_num * 8, kernel_size=filter_size, padding='same')
-        self.conv1_8 = nn.Conv2d(filter_num * 8, filter_num * 8, kernel_size=filter_size, padding='same')
-        self.bridge = nn.Sequential(
-            nn.MaxPool2d(kernel_size=2, stride=2),
-            self.conv1_7,
-            nn.ReLU(),
-            self.conv1_8,
-            nn.ReLU(),
-        )
+        # Decoder Stage 1
+        self.decoder_stage_1_concat = nn.Identity()  # Depth concatenation will be done in forward pass
+        self.decoder_stage_1_conv1 = nn.Conv2d(in_channels=filter_num*8 * 2, out_channels=filter_num*8, kernel_size=filter_size, padding='same')
+        self.decoder_stage_1_relu1 = nn.ReLU()
+        self.decoder_stage_1_conv2 = nn.Conv2d(in_channels=filter_num*8, out_channels=filter_num*8, kernel_size=filter_size, padding='same')
+        self.decoder_stage_1_relu2 = nn.ReLU()
+        self.decoder_stage_1_upconv = nn.ConvTranspose2d(in_channels=filter_num*8, out_channels=filter_num*4, kernel_size=2, stride=2)
+        self.decoder_stage_1_uprelu = nn.ReLU()
 
-        # 解码器部分
-        self.decoder_stage_1_upconv = nn.ConvTranspose2d(filter_num * 8, filter_num * 4, kernel_size=(2,2), stride=(2,2))
-        nn.init.kaiming_normal_(self.decoder_stage_1_upconv.weight, mode='fan_in', nonlinearity='relu')
-        # --cat
-        self.conv2_1 = nn.Conv2d(filter_num * 8, filter_num * 4, kernel_size=filter_size, padding='same')
-        self.conv2_2 = nn.Conv2d(filter_num * 4, filter_num * 4, kernel_size=filter_size, padding='same')
-        self.decoder_stage_1 = nn.Sequential(
-            self.conv2_1,
-            nn.ReLU(),
-            self.conv2_2,
-            nn.ReLU()
-        )
+        # Decoder Stage 2
+        self.decoder_stage_2_concat = nn.Identity()
+        self.decoder_stage_2_conv1 = nn.Conv2d(in_channels=filter_num*4 * 2, out_channels=filter_num*4, kernel_size=filter_size, padding='same')
+        self.decoder_stage_2_relu1 = nn.ReLU()
+        self.decoder_stage_2_conv2 = nn.Conv2d(in_channels=filter_num*4, out_channels=filter_num*4, kernel_size=filter_size, padding='same')
+        self.decoder_stage_2_relu2 = nn.ReLU()
+        self.decoder_stage_2_upconv = nn.ConvTranspose2d(in_channels=filter_num*4, out_channels=filter_num*2, kernel_size=2, stride=2)
+        self.decoder_stage_2_uprelu = nn.ReLU()
 
-        self.decoder_stage_2_upconv = nn.ConvTranspose2d(filter_num * 4, filter_num * 2, kernel_size=2, stride=2)
-        nn.init.kaiming_normal_(self.decoder_stage_2_upconv.weight, mode='fan_in', nonlinearity='relu')
-        # --cat
-        self.conv2_3 = nn.Conv2d(filter_num * 4, filter_num * 2, kernel_size=filter_size, padding='same')
-        self.conv2_4 = nn.Conv2d(filter_num * 2, filter_num * 2, kernel_size=filter_size, padding='same')
-        self.decoder_stage_2 = nn.Sequential(
-            self.conv2_3,
-            nn.ReLU(),
-            self.conv2_4,
-            nn.ReLU()
-        )
+        # Decoder Stage 3
+        self.decoder_stage_3_concat = nn.Identity()
+        self.decoder_stage_3_conv1 = nn.Conv2d(in_channels=filter_num*2 * 2, out_channels=filter_num*2, kernel_size=filter_size, padding='same')
+        self.decoder_stage_3_relu1 = nn.ReLU()
+        self.decoder_stage_3_conv2 = nn.Conv2d(in_channels=filter_num*2, out_channels=filter_num*2, kernel_size=filter_size, padding='same')
+        self.decoder_stage_3_relu2 = nn.ReLU()
+        self.dropout = nn.Dropout()
 
-        self.decoder_stage_3_upconv = nn.ConvTranspose2d(filter_num * 2, filter_num, kernel_size=2, stride=2)
-        nn.init.kaiming_normal_(self.decoder_stage_2_upconv.weight, mode='fan_in', nonlinearity='relu')
-        # --cat
-        self.conv2_5 = nn.Conv2d(filter_num * 2, filter_num, kernel_size=filter_size, padding='same')
-        self.conv2_6 = nn.Conv2d(filter_num, filter_num, kernel_size=filter_size, padding='same')
-        self.conv2_7 = nn.Conv2d(filter_num, filter_num, kernel_size=filter_size, padding='same')
-        self.conv2_8 = nn.Conv2d(filter_num, filter_num, kernel_size=filter_size, padding='same')
-        self.decoder_stage_3 = nn.Sequential(
-            self.conv2_5,
-            nn.ReLU(),
-            self.conv2_6,
-            nn.ReLU()
-        )
-        self.decoder_stage_4 = nn.Sequential(
-            nn.Dropout(p=0.5),
-            self.conv2_7,
-            nn.ReLU(),
-            self.conv2_8,
-            nn.ReLU(),
-            nn.Conv2d(filter_num, out_channels, kernel_size=1)
-        )
-        # 输出
-        self.Th = nn.Sigmoid()
+        # Decoder Stage 4
+        self.decoder_stage_4_conv1 = nn.Conv2d(in_channels=filter_num*2, out_channels=filter_num, kernel_size=filter_size, padding='same')
+        self.decoder_stage_4_relu1 = nn.ReLU()
+        self.decoder_stage_4_conv2 = nn.Conv2d(in_channels=filter_num, out_channels=filter_num, kernel_size=filter_size, padding='same')
+        self.decoder_stage_4_relu2 = nn.ReLU()
+        self.final_conv = nn.Conv2d(in_channels=filter_num, out_channels=1, kernel_size=1)
 
     def forward(self, x):
-        # 编码器
-        enc1 = self.encoder_stage_1(x)
-        enc2 = self.encoder_stage_2(enc1)
-        enc3 = self.encoder_stage_3(enc2)
+        # Encoder Path
+        enc2 = self.encoder_stage_2_relu1(self.encoder_stage_2_conv1(x))
+        enc2 = self.encoder_stage_2_relu2(self.encoder_stage_2_conv2(enc2))
+        enc2_pool = self.encoder_stage_2_maxpool(enc2)
 
-        bridge = self.bridge(enc3)
+        enc3 = self.encoder_stage_3_relu1(self.encoder_stage_3_conv1(enc2_pool))
+        enc3 = self.encoder_stage_3_relu2(self.encoder_stage_3_conv2(enc3))
+        enc3_pool = self.encoder_stage_3_maxpool(enc3)
 
-        # 解码器
-        dec1_up = self.decoder_stage_1_upconv(bridge)
-        dec1 = self.decoder_stage_1(torch.cat([dec1_up, enc3], dim=1))
-        dec2_up = self.decoder_stage_2_upconv(dec1)
-        dec2 = self.decoder_stage_2(torch.cat([dec2_up, enc2], dim=1))
-        dec3_up = self.decoder_stage_3_upconv(dec2)
-        dec3 = self.decoder_stage_3(torch.cat([dec3_up, enc1], dim=1))
-        output = self.decoder_stage_4(dec3)
+        enc4 = self.encoder_stage_4_relu1(self.encoder_stage_4_conv1(enc3_pool))
+        enc4 = self.encoder_stage_4_relu2(self.encoder_stage_4_conv2(enc4))
+        enc4_pool = self.encoder_stage_4_maxpool(enc4)
 
-        return self.Th(output)
-        # return output
+        # Bridge
+        bridge = self.bridge_relu1(self.bridge_conv1(enc4_pool))
+        bridge = self.bridge_relu2(self.bridge_conv2(bridge))
+        bridge_up = self.bridge_uprelu(self.bridge_upconv(bridge))
 
+        # Decoder Path
+        dec1 = torch.cat((bridge_up, enc4), dim=1)  # Depth concatenation
+        dec1 = self.decoder_stage_1_relu1(self.decoder_stage_1_conv1(dec1))
+        dec1 = self.decoder_stage_1_relu2(self.decoder_stage_1_conv2(dec1))
+        dec1_up = self.decoder_stage_1_uprelu(self.decoder_stage_1_upconv(dec1))
+
+        dec2 = torch.cat((dec1_up, enc3), dim=1)
+        dec2 = self.decoder_stage_2_relu1(self.decoder_stage_2_conv1(dec2))
+        dec2 = self.decoder_stage_2_relu2(self.decoder_stage_2_conv2(dec2))
+        dec2_up = self.decoder_stage_2_uprelu(self.decoder_stage_2_upconv(dec2))
+
+        dec3 = torch.cat((dec2_up, enc2), dim=1)
+        dec3 = self.decoder_stage_3_relu1(self.decoder_stage_3_conv1(dec3))
+        dec3 = self.decoder_stage_3_relu2(self.decoder_stage_3_conv2(dec3))
+        dec3 = self.dropout(dec3)
+
+        dec4 = self.decoder_stage_4_relu1(self.decoder_stage_4_conv1(dec3))
+        dec4 = self.decoder_stage_4_relu2(self.decoder_stage_4_conv2(dec4))
+
+        # Final Convolution Layer
+        final_output = self.final_conv(dec4)
+
+        return nn.Sigmoid()(final_output)
 
 if __name__ == '__main__':
+    # Example usage
+    output_size = (128, 128)
+    filter_num = 128
+
     x=torch.randn(1,1,128,128)
     net=UNet()
     print(net(x).shape)
