@@ -7,16 +7,16 @@ class UNet(nn.Module):
         super(UNet, self).__init__()
 
         # Encoder Stage 2
-        self.encoder_stage_2_conv1 = nn.Conv2d(in_channels=1, out_channels=filter_num*2, kernel_size=filter_size, padding='same')
+        self.encoder_stage_2_conv1 = nn.Conv2d(in_channels=1, out_channels=filter_num, kernel_size=filter_size, padding='same')
         self.encoder_stage_2_relu1 = nn.ReLU()
-        self.encoder_stage_2_conv2 = nn.Conv2d(in_channels=filter_num*2, out_channels=filter_num*2, kernel_size=filter_size, padding='same')
+        self.encoder_stage_2_conv2 = nn.Conv2d(in_channels=filter_num, out_channels=filter_num, kernel_size=filter_size, padding='same')
         self.encoder_stage_2_relu2 = nn.ReLU()
         self.encoder_stage_2_maxpool = nn.MaxPool2d(kernel_size=2, stride=2)
 
         # Encoder Stage 3
-        self.encoder_stage_3_conv1 = nn.Conv2d(in_channels=filter_num*2, out_channels=filter_num*4, kernel_size=filter_size, padding='same')
+        self.encoder_stage_3_conv1 = nn.Conv2d(in_channels=filter_num, out_channels=filter_num*2, kernel_size=filter_size, padding='same')
         self.encoder_stage_3_relu1 = nn.ReLU()
-        self.encoder_stage_3_conv2 = nn.Conv2d(in_channels=filter_num*4, out_channels=filter_num*4, kernel_size=filter_size, padding='same')
+        self.encoder_stage_3_conv2 = nn.Conv2d(in_channels=filter_num*2, out_channels=filter_num*2, kernel_size=filter_size, padding='same')
         self.encoder_stage_3_relu2 = nn.ReLU()
         self.encoder_stage_3_maxpool = nn.MaxPool2d(kernel_size=2, stride=2)
 
@@ -36,7 +36,6 @@ class UNet(nn.Module):
         self.bridge_uprelu = nn.ReLU()
 
         # Decoder Stage 1
-        self.decoder_stage_1_concat = nn.Identity()  # Depth concatenation will be done in forward pass
         self.decoder_stage_1_conv1 = nn.Conv2d(in_channels=filter_num*8 * 2, out_channels=filter_num*8, kernel_size=filter_size, padding='same')
         self.decoder_stage_1_relu1 = nn.ReLU()
         self.decoder_stage_1_conv2 = nn.Conv2d(in_channels=filter_num*8, out_channels=filter_num*8, kernel_size=filter_size, padding='same')
@@ -109,13 +108,10 @@ class UNet(nn.Module):
         # Final Convolution Layer
         final_output = self.final_conv(dec4)
 
-        return nn.Sigmoid()(final_output)
+        # return nn.Sigmoid()(final_output)
+        return final_output
 
 if __name__ == '__main__':
-    # Example usage
-    output_size = (128, 128)
-    filter_num = 128
-
-    x=torch.randn(1,1,128,128)
+    x=torch.randn(1,1,64,64)
     net=UNet()
     print(net(x).shape)
