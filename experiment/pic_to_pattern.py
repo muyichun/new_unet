@@ -8,8 +8,8 @@ import os
 import natsort
 import matplotlib.pyplot as plt
 
-input_pic_dic = r'/Users/muyichun/Desktop/Demo/MCF_speckle_digits/label_128'
-# input_pic_dic = r'/Users/muyichun/Desktop/Demo/fashion_MCF_QPI_dataset/labelInput'
+# input_pic_dic = r'/Users/muyichun/Desktop/Demo/MCF_speckle_digits/sum'
+input_pic_dic = r'/Users/muyichun/Desktop/Demo/fashion_MCF_QPI_dataset/sum'
 patterns_filename_to_save = r'/Users/muyichun/Desktop/Demo/MCF_speckle_digits/xxx/speckle_digits.hdf5'
 
 file_names = [img for img in glob.glob(input_pic_dic+'/*.png')]
